@@ -1,0 +1,258 @@
+---
+title: "lab-03"
+subtitle: ESS330
+author: 
+ - name: Kendall Landwehr
+ - email: kendall.landwehr@colostate.edu
+format: html
+---
+
+```{r}
+library(zoo)
+library(flextable)
+```
+
+##Question 1
+# Open data is important because it allows for transparency within science and accurate information sharing about current events and public/environmental health issues. If this data disappears it becomes difficult for stakeholders to have the information they need to make informed decisions. Having historical and real time data openly accessible also allows for more collaboration.  
+
+
+##Question 2
+
+```{r}
+#Step 1: Read in data
+library(tidyverse)
+url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
+covid_data = read_csv(url)
+```
+
+```{r}
+#Step 2: Create an object called my.date and set it as “2022-01-01” - ensure this is a date object:. Create a object called my.state and set it to “Colorado”.
+
+txt <- "2022-01-01"
+class(txt)
+
+date_example <- as.Date(txt)
+class(date_example)
+
+my.date <- as.Date("2022-02-01")
+my.state <- "Colorado"
+```
+```{r}
+my.state = "Colorado"
+```
+
+```{r}
+#Step 3
+
+colorado <- covid_data %>%
+  filter(state == "Colorado") %>%
+  group_by(county) %>%
+  arrange(date) %>%
+  mutate(new_cases = cases - lag(cases), new_deaths = deaths - lag(deaths)) %>%
+  ungroup()
+```
+
+```{r}
+#Step 4
+
+
+filter(colorado, date == "2022-02-01") %>%
+  slice_max(cases, n = 5) %>%
+  select(Date = date, County = county, Cases = cases) %>%
+  flextable () %>%
+  set_caption("Most Cummulative Cases")
+
+filter(colorado, date == "2022-02-01") %>%
+  slice_max(cases, n = 5) %>%
+  select(Date = date, County = county, Cases = new_cases) %>%
+  flextable() %>%
+  set_caption(caption = "Most New Cases")
+```
+
+
+##Question 3
+
+```{r}
+#Step 1
+pop_url <- 'https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/counties/totals/co-est2023-alldata.csv'
+pop <- read_csv(pop_url)
+
+
+pop <- pop_dat %>%
+  filter(COUNTY !=0) %>%
+  mutate(fips = paste0(sprintf("%02s", STNAME),
+                       sprintf("%03s", COUNTY))) %>%
+  select(fips, contains('NAME'), contains('2021'))
+```
+
+```{r}
+#Step 2
+names(pop)
+dim(pop)
+
+#There are 3195 rows and 19 columns in the modified data set. Some dames of the columns are "fips", "CITYNAME", "STNAME", "BIRTHS2021", and "DEATHS2021". Some of these names match the covid data including fips, state, and deaths. 
+```
+
+```{r}
+#Step 3
+
+range(pop_dat$POPESTIMATE2021)
+#The range of populations seen in Colorado counties in 2021 is 39,145,006
+```
+
+```{r}
+#Step 4
+library(dplyr)
+joined_dat <- colorado %>%
+  left_join(select(pop, fips, pop = POPESTIMATE2021), by = "fips") %>%
+  filter(date == my.date) %>%
+  mutate(per_capita_cum_cases = cases / pop,
+         per_capita_new_cases = new_cases / pop, 
+         per_capita_new_deaths = new_deaths / pop)
+glimpse(joined_dat)
+
+```
+
+```{r}
+#Step 5
+
+joined_dat_filt %>%
+  select(County = county, Cases = per_capita_cum_cases) %>%
+  slice_max(Cases, n= 5) %>%
+  flextable() %>%
+  set_caption(caption = "Most Cummulative Cases Per Capita")
+
+joined_dat_filt %>%
+  select(County = county, Cases = per_capita_new_cases) %>%
+  slice_max(Cases, n = 5) %>%
+  flextable() %>%
+  set_caption(caption = "Most New Cases Per Capita")
+```
+
+##Question 4
+```{r}
+library(flextable)
+last_14_days <- pop %>%
+  inner_join(colorado, by = "fips") %>%
+  filter(between(date, my.date - 13, my.date)) %>%
+  group_by(county) %>%
+  summarize(lag = sum(new_cases) / (POPESTIMATE2021[1]/ 100000))
+
+last_14_days %>%
+  select(County = county, Cases = lag) %>%
+  slice_max(Cases, n = 5) %>%
+  flextable() %>%
+  set_caption(caption = "Cases per 100,000 in the last 14 days")
+```
+
+##Question 5
+```{r}
+tmp.date <- as.Date("2021-02-01")
+lubridate::year(tmp.date)
+lubridate::month(tmp.date)
+lubridate::yday(tmp.date)
+
+county_deaths <- colorado %>%
+  mutate(date = as.Date(date)) %>%  
+  mutate(year = lubridate::year(date)) %>%  
+  group_by(fips) %>%
+  left_join(pop, by = "fips") %>%
+  mutate(death_ratio = 100 * sum(new_deaths, na.rm = TRUE) / first(DEATHS2021)) %>%
+  filter(death_ratio > 20) %>%
+  summarise(
+    deaths = sum(new_deaths, na.rm = TRUE),  
+    DEATHS2021 = first(DEATHS2021),  
+    death_ratio = first(death_ratio)) %>%
+  filter(year == 2021)
+  
+library(ggplot2)
+ggplot(county_deaths, aes(x = death_ratio,
+                          y = reorder(CTYNAME, death_ratio))) + 
+  geom_col() +
+  theme_minimal() +
+  labs(x = "COVID Death Ratio (%)",
+       y = "County",
+       title = "COVID Deaths as Percentage of Total Deaths in 2021")
+```
+##Question 6
+```{r}
+#Step 1
+colorado_1 <- covid_data %>%
+  group_by(date, state) %>%
+  summarise(cases = sum(cases)) %>%
+  filter(state %in% c('New York', "Ohio", 'Colorado', "Alabama"))%>%
+  group_by(state) %>%
+  mutate(newCases = cases - lag(cases), roll = zoo::rollmean(newCases, k = 7, align = "right", fill = NA)) %>%
+  ungroup()
+```
+
+```{r}
+#Step 2
+
+library(ggplot2)
+ggplot(colorado_1, aes(x = date)) + 
+  geom_col(aes(y = newCases), fill = "pink", col = NA) +
+  geom_line(aes(y = roll), col = "darkred", linewidth = 1) + 
+  theme_linedraw() + 
+  facet_wrap(~state, nrow = 2, scales = "free_y") + 
+  labs(title = "Cummulative COVID-19 Cases", x = "Date", y = "Case Count")
+```
+
+```{r}
+#Step 3
+pp = pop %>%
+  group_by(STNAME) %>%
+  summarise(colorado = 
+              sum(POPESTIMATE2021)) %>%
+  inner_join(colorado, by = c("STNAME" = "state")) %>%
+  mutate(perCap = newCases / colorado) %>%
+  group_by(STNAME) %>%
+  mutate(roll = zoo::rollmean(perCap, k = 7, align = "right", fill = NA)) %>%
+  ungroup()
+```
+
+```{r}
+#Step 4
+ggplot(pp, aes(x = date)) +
+  geom_line(aes(y = roll, col = STNAME), size = 1) + 
+  theme_linedraw() + 
+  labs(title = "Cummulative COVID-19 Cases", x = "Date", y = "Case Count",
+       color = "State Name")
+```
+
+```{r}
+#Step 5
+# The scaling by population makes it look like there are more cases in Alabama and Colorado than in the previous visualization. This graph makes Ohio look better and Alabama look worse. 
+```
+
+##Question 7
+
+```{r}
+county_cen = read_csv('https://raw.githubusercontent.com/mikejohnson51/csu-ess-330/refs/heads/main/resources/county-centroids.csv')
+```
+
+```{r}
+meta = read_csv('https://raw.githubusercontent.com/mikejohnson51/csu-ess-330/refs/heads/main/resources/county-centroids.csv') %>%
+  inner_join(covid_data) %>%
+  group_by(date) %>%
+  summarise(wmX_c = sum(LON*cases) / sum(cases), wmY_c = sum(LAT*cases) /
+              sum(cases), cases = sum(cases)) %>%
+  arrange(date) %>%
+  mutate(d = 1:n())
+```
+
+```{r}
+ggplot(meta) + 
+  borders("state", fill = "lightblue", colour = "white") + 
+  geom_point(aes(x = wmX_c, y = wmY_c, size = cases), color = "red", alpha =.25) + 
+  theme_linedraw() +
+  labs(color = "Time",
+       size = "Cases", 
+       x = "Longitude", y = "Latitude", 
+       title = "Weighted Center of COVID-19 Cases") + 
+  theme(legend.position = "none")   
+
+#Based on the output it looks like there was a major outbreak in Missouri which then spread to Ohio, and moved west towards Colorado and Utah.  
+```
+
+
