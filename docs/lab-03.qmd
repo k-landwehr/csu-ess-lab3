@@ -37,6 +37,7 @@ class(date_example)
 my.date <- as.Date("2022-02-01")
 my.state <- "Colorado"
 ```
+
 ```{r}
 my.state = "Colorado"
 ```
@@ -75,8 +76,7 @@ filter(colorado, date == "2022-02-01") %>%
 ```{r}
 #Step 1
 pop_url <- 'https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/counties/totals/co-est2023-alldata.csv'
-pop <- read_csv(pop_url)
-
+pop_dat <- read_csv(pop_url)
 
 pop <- pop_dat %>%
   filter(COUNTY !=0) %>%
@@ -110,19 +110,18 @@ joined_dat <- colorado %>%
          per_capita_new_cases = new_cases / pop, 
          per_capita_new_deaths = new_deaths / pop)
 glimpse(joined_dat)
-
 ```
 
 ```{r}
 #Step 5
 
-joined_dat_filt %>%
+joined_dat %>%
   select(County = county, Cases = per_capita_cum_cases) %>%
   slice_max(Cases, n= 5) %>%
   flextable() %>%
   set_caption(caption = "Most Cummulative Cases Per Capita")
 
-joined_dat_filt %>%
+joined_dat %>%
   select(County = county, Cases = per_capita_new_cases) %>%
   slice_max(Cases, n = 5) %>%
   flextable() %>%
