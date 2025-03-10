@@ -61,7 +61,7 @@ filter(colorado, date == "2022-02-01") %>%
   slice_max(cases, n = 5) %>%
   select(Date = date, County = county, Cases = cases) %>%
   flextable () %>%
-  set_caption("Most Cummulative Cases")
+  add_header_lines("Most Cummulative Cases")
 
 filter(colorado, date == "2022-02-01") %>%
   slice_max(cases, n = 5) %>%
@@ -118,7 +118,7 @@ joined_dat %>%
   select(County = county, Cases = per_capita_cum_cases) %>%
   slice_max(Cases, n= 5) %>%
   flextable() %>%
-  set_caption(caption = "Most Cummulative Cases Per Capita")
+  add_header_lines("Most Cummulative Cases Per Capita")
 
 joined_dat %>%
   select(County = county, Cases = per_capita_new_cases) %>%
