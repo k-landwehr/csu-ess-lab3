@@ -80,8 +80,7 @@ pop_dat <- read_csv(pop_url)
 
 pop <- pop_dat %>%
   filter(COUNTY !=0) %>%
-  mutate(fips = paste0(sprintf("%02s", STNAME),
-                       sprintf("%03s", COUNTY))) %>%
+  mutate(fips = paste0(STATE, COUNTY)) %>%
   select(fips, contains('NAME'), contains('2021'))
 ```
 
@@ -152,17 +151,11 @@ lubridate::month(tmp.date)
 lubridate::yday(tmp.date)
 
 county_deaths <- colorado %>%
-  mutate(date = as.Date(date)) %>%  
-  mutate(year = lubridate::year(date)) %>%  
-  group_by(fips) %>%
+  filter(date == tmp.date) %>% 
   left_join(pop, by = "fips") %>%
-  mutate(death_ratio = 100 * sum(new_deaths, na.rm = TRUE) / first(DEATHS2021)) %>%
-  filter(death_ratio > 20) %>%
-  summarise(
-    deaths = sum(new_deaths, na.rm = TRUE),  
-    DEATHS2021 = first(DEATHS2021),  
-    death_ratio = first(death_ratio)) %>%
-  filter(year == 2021)
+  group_by(fips, CTYNAME) %>%
+  summarise(death_ratio = 100 * sum(deaths, na.rm = TRUE) / first(POPESTIMATE2021)) %>%
+  ungroup() 
   
 library(ggplot2)
 ggplot(county_deaths, aes(x = death_ratio,
@@ -201,10 +194,10 @@ ggplot(colorado_1, aes(x = date)) +
 #Step 3
 pp = pop %>%
   group_by(STNAME) %>%
-  summarise(colorado = 
+  summarise(colorado_1 = 
               sum(POPESTIMATE2021)) %>%
-  inner_join(colorado, by = c("STNAME" = "state")) %>%
-  mutate(perCap = newCases / colorado) %>%
+  inner_join(colorado_1, by = c("STNAME" = "state")) %>%
+  mutate(perCap = newCases / colorado_1) %>%
   group_by(STNAME) %>%
   mutate(roll = zoo::rollmean(perCap, k = 7, align = "right", fill = NA)) %>%
   ungroup()
