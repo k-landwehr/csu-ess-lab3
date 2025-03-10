@@ -67,7 +67,7 @@ filter(colorado, date == "2022-02-01") %>%
   slice_max(cases, n = 5) %>%
   select(Date = date, County = county, Cases = new_cases) %>%
   flextable() %>%
-  set_caption(caption = "Most New Cases")
+  add_header_lines("Most New Cases")
 ```
 
 
@@ -124,7 +124,7 @@ joined_dat %>%
   select(County = county, Cases = per_capita_new_cases) %>%
   slice_max(Cases, n = 5) %>%
   flextable() %>%
-  set_caption(caption = "Most New Cases Per Capita")
+  add_header_lines("Most New Cases Per Capita")
 ```
 
 ##Question 4
@@ -140,7 +140,7 @@ last_14_days %>%
   select(County = county, Cases = lag) %>%
   slice_max(Cases, n = 5) %>%
   flextable() %>%
-  set_caption(caption = "Cases per 100,000 in the last 14 days")
+  add_header_lines("Cases per 100,000 in the last 14 days")
 ```
 
 ##Question 5
